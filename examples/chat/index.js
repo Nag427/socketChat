@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 var numUsers = 0;
 var users=[];
-var rooms=[];
+var rooms=["default"];
 function checkRoom(room){
 var index= rooms.indexOf(room);
 console.log(index);
@@ -31,7 +31,7 @@ io.on('connection', function (socket) {
   var addedUser = false;
 
   io.emit('room added', {
-	  username: socket.username,
+	  
 	  rooms:rooms
 	  });// when the client emits 'new message', this listens and executes
   socket.on('new message', function (data) {
@@ -65,6 +65,8 @@ io.on('connection', function (socket) {
     // we store the username in the socket session for this client
     socket.username = username;
     ++numUsers;
+	socket.room="default";
+	socket.join(socket.room);
 	users.push(username);
     addedUser = true;
     socket.emit('login', {
@@ -72,22 +74,23 @@ io.on('connection', function (socket) {
     });
 	console.log(users);
     // echo globally (all clients) that a person has connected
-    socket.broadcast.emit('user joined', {
+    socket.broadcast.to(socket.room).emit('user joined', {
       username: socket.username,
-      numUsers: numUsers
+      numUsers: numUsers,
+	  room:socket.room
     });
   });
 
   // when the client emits 'typing', we broadcast it to others
   socket.on('typing', function () {
-    socket.broadcast.emit('typing', {
+    socket.broadcast.to(socket.room).emit('typing', {
       username: socket.username
     });
   });
 
   // when the client emits 'stop typing', we broadcast it to others
   socket.on('stop typing', function () {
-    socket.broadcast.emit('stop typing', {
+    socket.broadcast.to(socket.room).emit('stop typing', {
       username: socket.username
     });
   });
@@ -101,11 +104,45 @@ io.on('connection', function (socket) {
     users.splice(index, 1);
 }
       // echo globally that this client has left
-      socket.broadcast.emit('user left', {
+      socket.broadcast.to(socket.room).emit('user left', {
         username: socket.username,
         numUsers: numUsers
       });
+	  socket.leave(socket.room);
 	  console.log(users);
     }
   });
+  
+  
+  
+  
+  socket.on('switchRoom', function(newroom){
+		// leave the current room (stored in session)
+		socket.leave(socket.room);
+		// join new room, received as function parameter
+		socket.join(newroom);
+		//socket.emit('updatechat', 'SERVER', 'you have connected to '+ newroom);
+		// sent message to OLD room
+		//socket.broadcast.to(socket.room).emit('updatechat', 'SERVER', socket.username+' has left this room');
+		socket.broadcast.to(socket.room).emit('user left', {
+        username: socket.username,
+        numUsers: numUsers
+      });
+		// update socket session room title
+		socket.room = newroom;
+		 socket.broadcast.to(socket.room).emit('user joined', {
+      username: socket.username,
+      numUsers: numUsers,
+	  room:socket.room
+    });//socket.emit('updaterooms', rooms, newroom);
+	});
+  
+  
+  
+  
+  
+  
+  
+  
+  
 });

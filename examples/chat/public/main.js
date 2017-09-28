@@ -20,6 +20,8 @@ $(function() {
   var $chatPage = $('.chat.page'); // The chatroom page
   var $roomPage=$('.room.page');//The room page
   // Prompt for setting a username
+  
+  var $roomName =$('.roomData');
   var username;
   var room=false;
   var connected = false;
@@ -28,7 +30,8 @@ $(function() {
   var $currentInput = $usernameInput.focus();
 
   var socket = io();
-
+  
+  
   function addParticipantsMessage (data) {
     var message = '';
     if (data.numUsers === 1) {
@@ -220,6 +223,10 @@ $(function() {
     updateTyping();
   });
 
+  
+  
+  
+  
   // Click events
 
   // Focus input when clicking anywhere on login page
@@ -240,6 +247,17 @@ $(function() {
 	$currentInput = $inputRoom.focus();
 	
   });
+  
+  
+  
+  $('.roomData').click( function() {
+	  //var room=this.id;
+	  console.log("click data");
+    	//socket.emit('switchRoom', room);
+	
+  });
+
+  
 
   // Socket events
 
@@ -261,7 +279,9 @@ $(function() {
 
   // Whenever the server emits 'user joined', log it in the chat body
   socket.on('user joined', function (data) {
-    log(data.username + ' joined');
+	  console.log(data);
+	  console.log("   user joined");
+    log(data.username + ' joined '+data.room);
     addParticipantsMessage(data);
   });
 
@@ -305,8 +325,9 @@ $(function() {
     
 	//console.log("room added");
 	$rooms.empty();
+	console.log(data);
 	for(var i=0;i<data.rooms.length;i++){
-	$rooms.append('<li class="roomData">'+data.rooms[i]+'</li>');
+	$rooms.append('<div class="roomData"id="'+data.rooms[i]+'">'+data.rooms[i]+'</div>');
 	//console.log(data.rooms[i]);
 	}
 	
@@ -334,4 +355,22 @@ $(function() {
       socket.emit('add room', roomName);
     }
   }
+  
+  
+  
+  
+  
+  
+  
+  
+  
 });
+/*
+var socket = io();
+  
+  
+  
+  
+  function switchRoom(room){
+	  console.log("Logged Switch Room");
+	}*/
