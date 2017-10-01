@@ -39,6 +39,7 @@ $(function() {
     } else {
       message += "there are " + data.numUsers + " participants";
     }
+	message +=" "+data.room;
     log(message);
   }
 
@@ -269,7 +270,7 @@ $(function() {
     log(message, {
       prepend: true
     });
-    addParticipantsMessage(data);
+   // addParticipantsMessage(data);
   });
 
   // Whenever the server emits 'new message', update the chat body
@@ -282,13 +283,13 @@ $(function() {
 	  console.log(data);
 	  console.log("   user joined");
     log(data.username + ' joined '+data.room);
-    addParticipantsMessage(data);
+    //addParticipantsMessage(data);
   });
 
   // Whenever the server emits 'user left', log it in the chat body
   socket.on('user left', function (data) {
     log(data.username + ' left');
-    addParticipantsMessage(data);
+    //addParticipantsMessage(data);
     removeChatTyping(data);
   });
 
@@ -317,6 +318,9 @@ $(function() {
     log('attempt to reconnect has failed');
   });
   
+  socket.on('clear', function () {
+    $messages.empty();
+  });
   
   
   
@@ -327,7 +331,7 @@ $(function() {
 	$rooms.empty();
 	console.log(data);
 	for(var i=0;i<data.rooms.length;i++){
-	$rooms.append('<div class="roomData"id="'+data.rooms[i]+'">'+data.rooms[i]+'</div>');
+	$rooms.append('<li class="roomData"  onclick="gotoRoom(event)">'+data.rooms[i]+'</a></li>');
 	//console.log(data.rooms[i]);
 	}
 	
@@ -336,6 +340,23 @@ $(function() {
     //addParticipantsMessage(data);
   });
 
+  
+  
+  
+  
+  window.gotoRoom=function(event){
+
+//console.log(event);
+  //event.preventDefault();
+  var gotoRoom =   event.currentTarget.innerHTML;
+  console.log(event.currentTarget.innerHTML);
+  socket.emit('switchRoom',{newroom: gotoRoom});
+  //socket.emit('join',gotoRoom );
+//var t = document.getElementById('gotoRoom').value;
+//  console.log("hey" +t );
+
+
+}
   
   
   

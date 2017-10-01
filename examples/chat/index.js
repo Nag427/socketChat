@@ -36,7 +36,7 @@ io.on('connection', function (socket) {
 	  });// when the client emits 'new message', this listens and executes
   socket.on('new message', function (data) {
     // we tell the client to execute 'new message'
-    socket.broadcast.emit('new message', {
+    socket.broadcast.to(socket.room).emit('new message', {
       username: socket.username,
       message: data
     });
@@ -69,8 +69,11 @@ io.on('connection', function (socket) {
 	socket.join(socket.room);
 	users.push(username);
     addedUser = true;
+	//var room = io.adapter.rooms[socket.room];
+		
     socket.emit('login', {
-      numUsers: numUsers
+      numUsers: numUsers,
+	  room:socket.room
     });
 	console.log(users);
     // echo globally (all clients) that a person has connected
@@ -116,14 +119,17 @@ io.on('connection', function (socket) {
   
   
   
-  socket.on('switchRoom', function(newroom){
+  socket.on('switchRoom', function(data){
 		// leave the current room (stored in session)
 		socket.leave(socket.room);
 		// join new room, received as function parameter
+		var newroom=data.newroom;
 		socket.join(newroom);
 		//socket.emit('updatechat', 'SERVER', 'you have connected to '+ newroom);
 		// sent message to OLD room
 		//socket.broadcast.to(socket.room).emit('updatechat', 'SERVER', socket.username+' has left this room');
+		socket.emit('clear');
+		
 		socket.broadcast.to(socket.room).emit('user left', {
         username: socket.username,
         numUsers: numUsers
