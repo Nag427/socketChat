@@ -4,6 +4,10 @@ var app = express();
 var path = require('path');
 var server = require('http').createServer(app);
 var io = require('../..')(server);
+var redis = require("redis");
+var sub=redis.createClient();
+var pub=redis.createClient();
+
 var port = process.env.PORT || 3000;
 
 server.listen(port, function () {
@@ -27,6 +31,24 @@ else return false;
 }
 
 
+
+sub.on("message", function (channel, data) {
+        data = JSON.parse(data);
+        console.log("Inside Redis_Sub: data from channel " + channel + ": " + (data.sendType));
+        if (parseInt("sendToSelf".localeCompare(data.sendType)) === 0) {
+             io.emit(data.method, data.data);
+        }else if (parseInt("sendToAllConnectedClients".localeCompare(data.sendType)) === 0) {
+             io.sockets.emit(data.method, data.data);
+        }else if (parseInt("sendToAllClientsInRoom".localeCompare(data.sendType)) === 0) {
+			console.log("emiting to "+channel +"and to method "+data.sendTo);
+            io.sockets.in(channel).emit(data.sendTo, data.data);
+        }       
+
+    });
+
+
+
+
 io.on('connection', function (socket) {
   var addedUser = false;
 
@@ -34,12 +56,23 @@ io.on('connection', function (socket) {
 	  
 	  rooms:rooms
 	  });// when the client emits 'new message', this listens and executes
-  socket.on('new message', function (data) {
+  socket.on('new message', function (msg) {
     // we tell the client to execute 'new message'
+	
+	 var reply = JSON.stringify({
+                method: 'message', 
+                sendType: 'sendToAllClientsInRoom',
+                data:{username: socket.username,
+				room:socket.room,message: msg},
+				sendTo:'new message'
+            });
+        pub.publish(socket.room,reply);
+	
+	/*
     socket.broadcast.to(socket.room).emit('new message', {
       username: socket.username,
-      message: data
-    });
+      message: msg
+    });*/
   });
   
   socket.on('add room',function(room){
@@ -70,18 +103,30 @@ io.on('connection', function (socket) {
 	users.push(username);
     addedUser = true;
 	//var room = io.adapter.rooms[socket.room];
-		
+	sub.subscribe("default");	
     socket.emit('login', {
       numUsers: numUsers,
 	  room:socket.room
     });
 	console.log(users);
     // echo globally (all clients) that a person has connected
-    socket.broadcast.to(socket.room).emit('user joined', {
+	
+	
+	 var reply = JSON.stringify({
+                method: 'message', 
+                sendType: 'sendToAllClientsInRoom',
+                data:{username: socket.username,
+				room:socket.room},
+				sendTo:'user joined'
+            });
+        pub.publish(socket.room,reply);
+	
+	
+  /*  socket.broadcast.to(socket.room).emit('user joined', {
       username: socket.username,
       numUsers: numUsers,
 	  room:socket.room
-    });
+    });*/
   });
 
   // when the client emits 'typing', we broadcast it to others
@@ -143,7 +188,10 @@ io.on('connection', function (socket) {
     });//socket.emit('updaterooms', rooms, newroom);
 	});
   
-  
+  sub.on("subscribe", function(channel, count) {
+        console.log("Subscribed to " + channel + ". Now subscribed to " + count + " channel(s).");
+    });
+
   
   
   
