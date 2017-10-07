@@ -36,9 +36,9 @@ sub.on("message", function (channel, data) {
         data = JSON.parse(data);
         console.log("Inside Redis_Sub: data from channel " + channel + ": " + (data.sendType));
         if (parseInt("sendToSelf".localeCompare(data.sendType)) === 0) {
-             io.emit(data.method, data.data);
+             io.emit(data.sendTo, data.data);
         }else if (parseInt("sendToAllConnectedClients".localeCompare(data.sendType)) === 0) {
-             io.sockets.emit(data.method, data.data);
+             io.sockets.emit(data.sendTo, data.data);
         }else if (parseInt("sendToAllClientsInRoom".localeCompare(data.sendType)) === 0) {
 			console.log("emiting to "+channel +"and to method "+data.sendTo);
             io.sockets.in(channel).emit(data.sendTo, data.data);
@@ -80,10 +80,24 @@ io.on('connection', function (socket) {
 	  rooms.push(room);
 	  //console.log("room added would be broadcasted"+rooms[0]);
 	  
-	  io.emit('room added', {
+		var reply = JSON.stringify({
+                method: 'message', 
+                sendType: 'sendToAllConnectedClients',
+                data:{username: socket.username,
+				rooms:rooms},
+				sendTo:'room added'
+            });
+        pub.publish(socket.room,reply);
+
+
+
+
+
+
+	/* io.emit('room added', {
 	  username: socket.username,
 	  rooms:rooms
-	  });
+	  });*/
 	  /*socket.emit('login', {
       numUsers: numUsers
     });
@@ -151,14 +165,31 @@ io.on('connection', function (socket) {
 		if (index > -1) {
     users.splice(index, 1);
 }
+
+var reply = JSON.stringify({
+                method: 'message', 
+                sendType: 'sendToAllClientsInRoom',
+                data:{username: socket.username,
+				room:socket.room},
+				sendTo:'user left'
+            });
+        pub.publish(socket.room,reply);
+
+	sub.quit();
+        pub.publish("chatting","User is disconnected :" + socket.id);
+
       // echo globally that this client has left
-      socket.broadcast.to(socket.room).emit('user left', {
+     /* socket.broadcast.to(socket.room).emit('user left', {
         username: socket.username,
         numUsers: numUsers
-      });
+      });*/
 	  socket.leave(socket.room);
 	  console.log(users);
-    }
+	  
+	  
+	  
+	  
+	     }
   });
   
   
@@ -170,6 +201,8 @@ io.on('connection', function (socket) {
 		// join new room, received as function parameter
 		var newroom=data.newroom;
 		socket.join(newroom);
+			
+    
 		//socket.emit('updatechat', 'SERVER', 'you have connected to '+ newroom);
 		// sent message to OLD room
 		//socket.broadcast.to(socket.room).emit('updatechat', 'SERVER', socket.username+' has left this room');
@@ -180,12 +213,43 @@ io.on('connection', function (socket) {
         numUsers: numUsers
       });
 		// update socket session room title
+		
+		
+var reply = JSON.stringify({
+                method: 'message', 
+                sendType: 'sendToAllClientsInRoom',
+                data:{username: socket.username,
+				numUsers: numUsers,
+				room:socket.room},
+				sendTo:'user left'
+            });
+        pub.publish(socket.room,reply);
+		
+		
 		socket.room = newroom;
+		sub.subscribe(newroom);
+		
+		
+		/*
 		 socket.broadcast.to(socket.room).emit('user joined', {
       username: socket.username,
       numUsers: numUsers,
 	  room:socket.room
-    });//socket.emit('updaterooms', rooms, newroom);
+    });
+	*/
+	//socket.emit('updaterooms', rooms, newroom);
+	 reply = JSON.stringify({
+                method: 'message', 
+                sendType: 'sendToAllClientsInRoom',
+                data:{username: socket.username,
+				room:socket.room},
+				sendTo:'user joined'
+            });
+        pub.publish(socket.room,reply);
+	
+	
+	
+	
 	});
   
   sub.on("subscribe", function(channel, count) {
