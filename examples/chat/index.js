@@ -3,7 +3,7 @@ var express = require('express');
 var app = express();
 var path = require('path');
 var server = require('http').createServer(app);
-var io = require('../..')(server);
+var serv = require('../..')(server);
 var redis = require("redis");
 var sub=redis.createClient();
 var pub=redis.createClient();
@@ -13,7 +13,7 @@ var port = process.env.PORT || 3000;
 server.listen(port, function () {
   console.log('Server listening at port %d', port);
 });
-
+var io = serv.of('/');
 // Routing
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -36,12 +36,12 @@ sub.on("message", function (channel, data) {
         data = JSON.parse(data);
         console.log("Inside Redis_Sub: data from channel " + channel + ": " + (data.sendType));
         if (parseInt("sendToSelf".localeCompare(data.sendType)) === 0) {
-             io.emit(data.sendTo, data.data);
+             serv.emit(data.sendTo, data.data);
         }else if (parseInt("sendToAllConnectedClients".localeCompare(data.sendType)) === 0) {
-             io.sockets.emit(data.sendTo, data.data);
+             serv.sockets.emit(data.sendTo, data.data);
         }else if (parseInt("sendToAllClientsInRoom".localeCompare(data.sendType)) === 0) {
 			console.log("emiting to "+channel +"and to method "+data.sendTo);
-            io.sockets.in(channel).emit(data.sendTo, data.data);
+            serv.sockets.in(channel).emit(data.sendTo, data.data);
         }       
 
     });
